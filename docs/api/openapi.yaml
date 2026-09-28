@@ -1,0 +1,892 @@
+openapi: 3.1.0
+info:
+  title: ConConnect CRM Integration API
+  version: 0.1.0-draft
+  description: |
+    Provider-neutral API for reading and writing nonprofit constituent and giving
+    data across Salesforce, Blackbaud Raiser's Edge NXT and Bonterra.
+
+    **Status: design draft.** This is a contract sketch to review, not an
+    implemented API. It covers the core entity and connection surface; activities,
+    notes, relationships, households and outbound webhooks follow the same patterns
+    and are elided here for reviewability.
+
+    See `docs/06-public-api.md` for the narrative contract, and
+    `docs/02-canonical-data-model.md` for the full data model.
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.conconnect.example/v1
+    description: Production (placeholder)
+  - url: https://api.sandbox.conconnect.example/v1
+    description: Sandbox (placeholder)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Connections
+  - name: Constituents
+  - name: Gifts
+  - name: Commitments
+  - name: Batch
+
+paths:
+  /providers:
+    get:
+      tags: [Connections]
+      summary: List supported providers and their connect requirements
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ProviderInfo" }
+
+  /connections:
+    get:
+      tags: [Connections]
+      summary: List connections for the authenticated tenant
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Connection" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+    post:
+      tags: [Connections]
+      summary: Begin a connect flow
+      description: |
+        The `next` object differs by provider. OAuth providers return a redirect;
+        providers with support-issued credentials (Bonterra EveryAction) return
+        manual instructions and an expected lead time.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider]
+              properties:
+                provider: { $ref: "#/components/schemas/ProviderId" }
+                display_name: { type: string }
+                redirect_uri: { type: string, format: uri }
+      responses:
+        "201":
+          description: Connection created in a pending state
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ConnectFlowResponse" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /connections/{connectionId}:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionIdPath"
+    get:
+      tags: [Connections]
+      summary: Get a connection
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Connection" }
+        "404": { $ref: "#/components/responses/Error" }
+    delete:
+      tags: [Connections]
+      summary: Revoke credentials and stop syncing
+      responses:
+        "204": { description: Deleted }
+
+  /connections/{connectionId}/capabilities:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionIdPath"
+    get:
+      tags: [Connections]
+      summary: Get the capability matrix for this connection
+      description: |
+        Computed from the live instance, not from documentation — it reflects this
+        tenant's schema variant, enabled features, licence tier and effective field
+        permissions.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CapabilityMatrix" }
+
+  /connections/{connectionId}/sync-status:
+    parameters:
+      - $ref: "#/components/parameters/ConnectionIdPath"
+    get:
+      tags: [Connections]
+      summary: Per-entity sync state, cursor position and lag
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SyncStatus" }
+
+  /constituents:
+    get:
+      tags: [Constituents]
+      summary: List constituents
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Consistency"
+        - name: updated_at[gte]
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Constituent" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+        "424": { $ref: "#/components/responses/Error" }
+    post:
+      tags: [Constituents]
+      summary: Create a constituent
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/OnUnsupported"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConstituentInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Constituent" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /constituents/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Constituents]
+      summary: Get a constituent
+      parameters:
+        - $ref: "#/components/parameters/Consistency"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Constituent" }
+        "404": { $ref: "#/components/responses/Error" }
+    patch:
+      tags: [Constituents]
+      summary: Partially update a constituent
+      description: |
+        `null` clears a field; an omitted field is left unchanged. This distinction
+        is load-bearing — see `docs/07-field-mapping.md#transform-rules`.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/OnUnsupported"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConstituentInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Constituent" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422": { $ref: "#/components/responses/Error" }
+
+  /constituents/{id}/gifts:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Gifts]
+      summary: List gifts for a constituent
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Gift" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+
+  /gifts:
+    get:
+      tags: [Gifts]
+      summary: List gifts
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: gift_date[gte]
+          in: query
+          schema: { type: string, format: date }
+        - name: gift_date[lt]
+          in: query
+          schema: { type: string, format: date }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/GiftStatus" }
+        - name: designation_id
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, examples: ["-gift_date"] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Gift" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+                  meta: { $ref: "#/components/schemas/ResponseMeta" }
+    post:
+      tags: [Gifts]
+      summary: Record a gift
+      description: |
+        `splits[]` must sum exactly to `amount`, or the request is rejected with
+        `validation_failed`. `soft_credits[]` are recognition and do not sum to
+        `amount`.
+
+        The idempotency key should be derived from the payment processor's
+        transaction reference where one exists, which makes double-posting a
+        donation structurally impossible.
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/OnUnsupported"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GiftInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gift" }
+        "409": { $ref: "#/components/responses/Error" }
+        "422":
+          description: |
+            Validation failure or an unsupported capability on this provider.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              examples:
+                unbalancedSplits:
+                  summary: Splits do not sum to amount
+                  value:
+                    error:
+                      code: validation_failed
+                      message: "splits must sum to amount (got 24000, expected 25000)"
+                      field: splits
+                      retryable: false
+                capabilityGap:
+                  summary: Provider cannot represent soft credits
+                  value:
+                    error:
+                      code: capability_unsupported
+                      message: "Provider 'bonterra_apricot' cannot represent Gift.soft_credits."
+                      provider: bonterra_apricot
+                      unsupported_fields: ["soft_credits"]
+                      remedy: "Omit the field, or send X-ConConnect-On-Unsupported: drop."
+                      retryable: false
+
+  /gifts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdPath"
+    get:
+      tags: [Gifts]
+      summary: Get a gift
+      parameters:
+        - $ref: "#/components/parameters/Consistency"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Gift" }
+        "404": { $ref: "#/components/responses/Error" }
+
+  /commitments:
+    get:
+      tags: [Commitments]
+      summary: List commitments (pledges, recurring gifts, grants)
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/CommitmentStatus" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Commitment" }
+                  pagination: { $ref: "#/components/schemas/Pagination" }
+
+  /batch:
+    post:
+      tags: [Batch]
+      summary: Submit up to 100 operations against one connection
+      description: |
+        Non-transactional unless `atomic: true` is requested AND the provider
+        supports transactional batches (currently Salesforce only). Requesting
+        atomicity where it is unavailable returns `capability_unsupported` rather
+        than silently proceeding.
+      parameters:
+        - $ref: "#/components/parameters/ConnectionIdQuery"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operations]
+              properties:
+                atomic: { type: boolean, default: false }
+                operations:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: object
+                    required: [method, path]
+                    properties:
+                      method: { type: string, enum: [POST, PATCH, DELETE] }
+                      path: { type: string, examples: ["/gifts"] }
+                      body: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Per-item outcomes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BatchResponse" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        A ConConnect service key (`ccn_sk_…`) or an OAuth 2.0 access token. The
+        tenant is resolved from the credential and never from the request body.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    ConnectionIdPath:
+      name: connectionId
+      in: path
+      required: true
+      schema: { type: string }
+    ConnectionIdQuery:
+      name: connection_id
+      in: query
+      description: |
+        Target connection. Optional when the tenant has exactly one connection
+        capable of the operation; required otherwise — guessing which donor
+        database receives a write is not an acceptable risk.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque, signed, expires after 24 hours.
+      schema: { type: string }
+    Consistency:
+      name: consistency
+      in: query
+      description: |
+        `cached` (default) is served from our synced store and costs no provider
+        quota. `live` calls the provider directly — authoritative, but subject to
+        provider latency and rate limits.
+      schema: { type: string, enum: [cached, live], default: cached }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Stored 24 hours with its response. A replay returns the stored response;
+        reuse with a different body returns 409 `duplicate`.
+      schema: { type: string, maxLength: 255 }
+    OnUnsupported:
+      name: X-ConConnect-On-Unsupported
+      in: header
+      description: |
+        `fail` (default) rejects a request containing fields the provider cannot
+        represent. `drop` discards them and reports each in `warnings[]`. `custom`
+        attempts the provider's custom-field area.
+
+        The default is `fail` deliberately: silently dropping a consent or
+        anonymity flag is a compliance incident, not a convenience.
+      schema: { type: string, enum: [fail, drop, custom], default: fail }
+
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+
+  schemas:
+    ProviderId:
+      type: string
+      enum:
+        - salesforce_npc
+        - salesforce_npsp
+        - blackbaud_renxt
+        - bonterra_everyaction
+        - bonterra_apricot
+        - bonterra_eto
+
+    ProviderInfo:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/ProviderId" }
+        display_name: { type: string }
+        connect_method:
+          type: string
+          enum: [oauth2_authorization_code, oauth2_jwt_bearer, manual_key_request, username_password]
+        self_service: { type: boolean }
+        expected_lead_time: { type: string, examples: ["immediate", "5-15 business days"] }
+        licence_requirements: { type: string, nullable: true }
+
+    ConnectFlowResponse:
+      type: object
+      properties:
+        connection_id: { type: string }
+        status: { type: string, enum: [pending] }
+        next:
+          oneOf:
+            - type: object
+              title: Redirect
+              properties:
+                kind: { type: string, enum: [redirect] }
+                authorize_url: { type: string, format: uri }
+            - type: object
+              title: ManualKeyRequest
+              properties:
+                kind: { type: string, enum: [manual_key_request] }
+                instructions_url: { type: string, format: uri }
+                expected_lead_time: { type: string }
+                submit_key_at: { type: string }
+
+    Connection:
+      type: object
+      properties:
+        id: { type: string }
+        provider: { $ref: "#/components/schemas/ProviderId" }
+        display_name: { type: string }
+        status:
+          type: string
+          enum: [pending, active, needs_reconnect, needs_configuration, disabled, error]
+          description: |
+            `needs_configuration` is used when the instance is ambiguous — for
+            example a Salesforce org with both NPSP and Nonprofit Cloud present,
+            where an explicit choice of authoritative model is required.
+        instance_profile: { type: object, additionalProperties: true }
+        last_health_check_at: { type: string, format: date-time, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    CapabilityMatrix:
+      type: object
+      properties:
+        provider: { $ref: "#/components/schemas/ProviderId" }
+        entities:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              read: { $ref: "#/components/schemas/Support" }
+              create: { $ref: "#/components/schemas/Support" }
+              update: { $ref: "#/components/schemas/Support" }
+              delete: { $ref: "#/components/schemas/Support" }
+              unsupported_fields: { type: array, items: { type: string } }
+              read_only_fields: { type: array, items: { type: string } }
+              derived_fields: { type: array, items: { type: string } }
+        change_detection:
+          type: object
+          properties:
+            mechanism: { type: string, enum: [webhook, delta_poll, export_job, full_scan] }
+            child_changes_propagate:
+              type: boolean
+              description: |
+                False for Blackbaud RE NXT — a new gift does not update the
+                constituent's modified timestamp, so every entity type must be
+                polled independently.
+            deletes_detectable: { type: boolean }
+            min_poll_interval_seconds: { type: integer }
+        writes:
+          type: object
+          properties:
+            transactional_batch: { type: boolean }
+            upsert_by_external_id: { type: boolean }
+            max_batch_size: { type: integer }
+            optimistic_concurrency: { type: boolean }
+        limits:
+          type: object
+          properties:
+            scope:
+              type: string
+              enum: [per_application, per_tenant, per_user]
+              description: |
+                `per_application` means the budget is shared across all tenants —
+                the case for Blackbaud, and the reason throttling is global.
+            requests_per_window: { type: integer }
+            window_seconds: { type: integer }
+            notes: { type: string }
+
+    Support:
+      type: string
+      enum: [full, partial, none]
+
+    SyncStatus:
+      type: object
+      properties:
+        connection_id: { type: string }
+        entities:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              last_synced_at: { type: string, format: date-time, nullable: true }
+              lag_seconds: { type: integer, nullable: true }
+              records_synced: { type: integer }
+              last_error: { type: string, nullable: true }
+        outbox:
+          type: object
+          properties:
+            pending: { type: integer }
+            dead_lettered: { type: integer }
+            oldest_pending_age_seconds: { type: integer, nullable: true }
+
+    Money:
+      type: object
+      required: [amount_minor, currency]
+      properties:
+        amount_minor:
+          type: integer
+          description: Integer minor units (cents). Never a float.
+        currency: { type: string, minLength: 3, maxLength: 3, examples: ["USD"] }
+
+    Source:
+      type: object
+      properties:
+        connection_id: { type: string }
+        provider: { $ref: "#/components/schemas/ProviderId" }
+        provider_object: { type: string }
+        provider_id: { type: string }
+        synced_at: { type: string, format: date-time }
+        provider_updated_at: { type: string, format: date-time, nullable: true }
+        version: { type: string, nullable: true }
+
+    ResponseMeta:
+      type: object
+      properties:
+        consistency: { type: string, enum: [cached, live] }
+        synced_at: { type: string, format: date-time, nullable: true }
+        staleness_seconds: { type: integer, nullable: true }
+        warnings:
+          type: array
+          items:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+              field: { type: string, nullable: true }
+
+    Pagination:
+      type: object
+      properties:
+        next_cursor: { type: string, nullable: true }
+        has_more: { type: boolean }
+        limit: { type: integer }
+
+    Name:
+      type: object
+      properties:
+        prefix: { type: string, nullable: true }
+        first: { type: string, nullable: true }
+        middle: { type: string, nullable: true }
+        last: { type: string, nullable: true }
+        suffix: { type: string, nullable: true }
+        formal_salutation: { type: string, nullable: true }
+        informal_salutation: { type: string, nullable: true }
+        sort_name: { type: string, nullable: true, readOnly: true }
+        display_name: { type: string, nullable: true }
+
+    Consent:
+      type: object
+      description: |
+        Legally and ethically load-bearing. Conflict resolution for this block is
+        most-restrictive-wins, not provider-wins.
+      properties:
+        do_not_contact: { type: boolean }
+        do_not_solicit: { type: boolean }
+        anonymous_giving: { type: boolean }
+        email_opt_in_status:
+          type: string
+          enum: [opted_in, opted_out, unknown, pending]
+        consent_source: { type: string, nullable: true }
+        consent_updated_at: { type: string, format: date-time, nullable: true }
+
+    ConstituentInput:
+      type: object
+      properties:
+        type: { type: string, enum: [individual, organization, household] }
+        name: { $ref: "#/components/schemas/Name" }
+        birth_date: { type: string, format: date, nullable: true }
+        deceased: { type: boolean }
+        consent: { $ref: "#/components/schemas/Consent" }
+        constituent_codes: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        custom: { type: object, additionalProperties: true }
+
+    Constituent:
+      allOf:
+        - $ref: "#/components/schemas/ConstituentInput"
+        - type: object
+          properties:
+            id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+            sources:
+              type: array
+              items: { $ref: "#/components/schemas/Source" }
+            giving_summary:
+              type: object
+              readOnly: true
+              description: Computed by ConConnect; never written back to a provider.
+              properties:
+                first_gift_date: { type: string, format: date, nullable: true }
+                last_gift_date: { type: string, format: date, nullable: true }
+                lifetime_total: { $ref: "#/components/schemas/Money" }
+                gift_count: { type: integer }
+
+    GiftStatus:
+      type: string
+      enum: [received, pending, refunded, written_off, voided]
+
+    GiftSplit:
+      type: object
+      required: [designation_id, amount]
+      properties:
+        designation_id: { type: string }
+        amount: { $ref: "#/components/schemas/Money" }
+
+    SoftCredit:
+      type: object
+      required: [constituent_id, amount]
+      properties:
+        constituent_id: { type: string }
+        amount: { $ref: "#/components/schemas/Money" }
+        credit_type:
+          type: string
+          enum: [daf_advisor, solicitor, household_member, matching_company, other]
+
+    GiftInput:
+      type: object
+      required: [constituent_id, amount, gift_date]
+      properties:
+        constituent_id: { type: string }
+        commitment_id: { type: string, nullable: true }
+        amount: { $ref: "#/components/schemas/Money" }
+        gift_date:
+          type: string
+          format: date
+          description: Calendar date; never timezone-converted, or gifts shift fiscal year.
+        received_date: { type: string, format: date, nullable: true }
+        gift_type:
+          type: string
+          enum: [cash, check, credit_card, ach, stock, in_kind, crypto, daf, grant, other]
+        status: { $ref: "#/components/schemas/GiftStatus" }
+        channel:
+          type: string
+          enum: [online, mail, phone, event, in_person, wire, other]
+        splits:
+          type: array
+          description: Must sum exactly to `amount`.
+          items: { $ref: "#/components/schemas/GiftSplit" }
+        soft_credits:
+          type: array
+          description: Recognition, not allocation — does not sum to `amount`.
+          items: { $ref: "#/components/schemas/SoftCredit" }
+        anonymous: { type: boolean }
+        payment_reference: { type: string, nullable: true }
+        custom: { type: object, additionalProperties: true }
+
+    Gift:
+      allOf:
+        - $ref: "#/components/schemas/GiftInput"
+        - type: object
+          properties:
+            id: { type: string }
+            created_at: { type: string, format: date-time }
+            updated_at: { type: string, format: date-time }
+            sources:
+              type: array
+              items: { $ref: "#/components/schemas/Source" }
+
+    CommitmentStatus:
+      type: string
+      enum: [draft, active, paused, failing, fulfilled, lapsed, cancelled]
+      description: |
+        `failing` covers recurring gifts whose payment method is failing — an
+        operational category nonprofits run specific recovery workflows on. It has
+        no clean equivalent in Salesforce NPSP.
+
+    Commitment:
+      type: object
+      properties:
+        id: { type: string }
+        constituent_id: { type: string }
+        commitment_type:
+          type: string
+          enum: [pledge, recurring, grant, planned_gift]
+        status: { $ref: "#/components/schemas/CommitmentStatus" }
+        total_amount:
+          oneOf:
+            - $ref: "#/components/schemas/Money"
+            - type: "null"
+          description: Null for open-ended recurring gifts.
+        installment_amount: { $ref: "#/components/schemas/Money" }
+        frequency:
+          type: string
+          enum: [one_time, weekly, monthly, quarterly, semiannual, annual, irregular]
+        start_date: { type: string, format: date }
+        next_expected_date: { type: string, format: date, nullable: true }
+        balance:
+          type: object
+          readOnly: true
+          properties:
+            committed: { $ref: "#/components/schemas/Money" }
+            received: { $ref: "#/components/schemas/Money" }
+            outstanding: { $ref: "#/components/schemas/Money" }
+            installments_paid: { type: integer }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/Source" }
+
+    BatchResponse:
+      type: object
+      properties:
+        atomic: { type: boolean }
+        summary:
+          type: object
+          properties:
+            succeeded: { type: integer }
+            failed: { type: integer }
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              index: { type: integer }
+              status: { type: string, enum: [succeeded, failed] }
+              id: { type: string, nullable: true }
+              error: { $ref: "#/components/schemas/ErrorBody" }
+
+    ErrorBody:
+      type: object
+      nullable: true
+      properties:
+        code:
+          type: string
+          enum:
+            - invalid_request
+            - unauthenticated
+            - forbidden
+            - not_found
+            - conflict
+            - duplicate
+            - validation_failed
+            - capability_unsupported
+            - filter_unsupported
+            - connection_unavailable
+            - rate_limited
+            - provider_error
+            - provider_unavailable
+            - provider_timeout
+        message: { type: string }
+        detail: { type: string, nullable: true }
+        request_id: { type: string }
+        field: { type: string, nullable: true }
+        provider: { $ref: "#/components/schemas/ProviderId" }
+        provider_error:
+          type: object
+          nullable: true
+          description: The provider's original error, preserved so callers never need to parse it.
+          properties:
+            code: { type: string }
+            message: { type: string }
+        unsupported_fields: { type: array, items: { type: string } }
+        remedy: { type: string, nullable: true }
+        retryable: { type: boolean }
+        retry_after_seconds: { type: integer, nullable: true }
+        docs: { type: string, format: uri, nullable: true }
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error: { $ref: "#/components/schemas/ErrorBody" }
