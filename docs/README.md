@@ -16,7 +16,7 @@ Read in order. Each document states its own decisions and open questions.
 | 09 | [Open questions](09-open-questions.md) | Decisions needed before/during build |
 | 10 | [Roadmap](10-roadmap.md) | Phasing and rough sequencing |
 | 11 | [Partnership status](11-partnership-status.md) | Blackbaud ISV standing, outstanding obligations, programme contacts |
-| 12 | [Integration interest page](12-integration-interest-page.md) | The in-product page measuring which integration customers want first |
+| 12 | [Integration marketplace](12-integration-marketplace.md) | The in-product marketplace where customers book a setup call, and what it measures |
 
 Provider-specific research and integration notes:
 

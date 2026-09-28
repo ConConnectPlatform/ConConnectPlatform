@@ -1,4 +1,4 @@
-<title>Connect Your CRM</title>
+<title>Integration Marketplace</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -60,6 +60,14 @@
   .lede{margin:0 0 30px;font-size:16.5px;color:var(--ink-2);max-width:62ch;}
   .lede b{color:var(--ink);font-weight:600;}
 
+  .steps{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));
+         gap:16px;margin:0 0 34px;padding:0;}
+  .steps li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);}
+  .steps .num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);
+              color:var(--accent);font-family:var(--mono);font-size:11px;display:flex;
+              align-items:center;justify-content:center;margin-top:1px;font-weight:500;}
+  .steps b{display:block;color:var(--ink);font-weight:600;font-size:14px;margin-bottom:1px;}
+
   /* cards */
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:18px;
         align-items:stretch;}
@@ -74,9 +82,8 @@
            letter-spacing:-.012em;margin:0;}
   .pill{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
         padding:4px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;font-weight:500;}
-  .pill-ok{background:var(--ok-soft);color:var(--ok);}
-  .pill-warn{background:var(--warn-soft);color:var(--warn);}
-  .pill-idle{background:var(--idle-soft);color:var(--idle);}
+  .pill-cat{background:var(--accent-soft);color:var(--accent);}
+  .pill-case{background:var(--warn-soft);color:var(--warn);}
 
   .syncs{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
          color:var(--ink-3);margin:0 0 9px;}
@@ -90,15 +97,13 @@
   .spacer{flex:1;}
 
   button{font:inherit;cursor:pointer;}
-  .btn{width:100%;background:var(--accent);color:var(--accent-ink);border:1px solid transparent;
+  .btn{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;
+       background:var(--accent);color:var(--accent-ink);border:1px solid transparent;
        border-radius:7px;padding:11px 14px;font-family:var(--display);font-weight:600;
-       font-size:14.5px;letter-spacing:-.005em;transition:opacity .15s, background .15s;}
+       font-size:14.5px;letter-spacing:-.005em;transition:opacity .15s;}
   .btn:hover{opacity:.88;}
   .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
-  .btn[aria-pressed="true"]{background:var(--ok-soft);color:var(--ok);
-       border-color:color-mix(in srgb, var(--ok) 30%, transparent);cursor:default;}
-  .btn[aria-pressed="true"]:hover{opacity:1;}
-  .confirm{font-size:12.5px;color:var(--ink-2);margin:9px 0 0;text-align:center;}
+  .confirm{font-size:12.5px;color:var(--ink-3);margin:9px 0 0;text-align:center;}
 
   /* other */
   .other{margin-top:18px;background:var(--surface-2);border:1px dashed var(--line);
@@ -126,14 +131,20 @@
 </style>
 
 <div class="band"><div class="wrap"><strong>Prototype</strong>
-  <span>This is the page as it will appear inside ConConnect. In the shipped version each request is recorded against the organization's account.</span>
+  <span>This is the marketplace as it will appear inside ConConnect. In the shipped version the buttons open your booking calendar and each booking is recorded against the organization.</span>
 </div></div>
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">ConConnect · Settings</p>
-    <h1>Connect your CRM</h1>
-    <p class="lede">Keep the people and programmes you track in ConConnect in step with the system your team already works in. <b>Tell us which one you use</b> and we will bring you into the pilot when it opens.</p>
+    <p class="eyebrow">ConConnect · Marketplace</p>
+    <h1>Integrations</h1>
+    <p class="lede">Keep the people and programmes you track in ConConnect in step with the system your team already works in. <b>Every integration is set up with us on a call</b> &mdash; you do not configure anything yourself.</p>
+
+    <ol class="steps">
+      <li><span class="num">1</span><div><b>Book a call</b>Pick a time that suits your team. Thirty minutes.</div></li>
+      <li><span class="num">2</span><div><b>We configure it with you</b>We connect your account and map your fields on the call.</div></li>
+      <li><span class="num">3</span><div><b>Your data stays in step</b>Records flow between both systems from then on.</div></li>
+    </ol>
   </header>
 
   <div class="grid">
@@ -144,9 +155,8 @@
           <p class="vendor">Blackbaud</p>
           <h2 class="product">Raiser&rsquo;s Edge NXT</h2>
         </div>
-        <span class="pill pill-ok">Building</span>
+        <span class="pill pill-cat">Fundraising</span>
       </div>
-      <p class="syncs">Two-way</p>
       <ul>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Constituents, gifts, pledges and recurring gifts</li>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Split gifts, soft credits and tributes kept intact</li>
@@ -154,8 +164,8 @@
       </ul>
       <p class="note">Built on the SKY API. ConConnect is a Blackbaud ISV partner.</p>
       <div class="spacer"></div>
-      <button class="btn" data-key="renxt" data-label="Raiser&rsquo;s Edge NXT">Request early access</button>
-      <p class="confirm" data-confirm="renxt" hidden></p>
+      <a class="btn" href="#" data-key="renxt" data-label="Raiser&rsquo;s Edge NXT" target="_blank" rel="noopener">Book setup call</a>
+      <p class="confirm" data-confirm="renxt">30 minutes, with your data in front of us.</p>
     </article>
 
     <article class="card">
@@ -164,9 +174,8 @@
           <p class="vendor">Salesforce</p>
           <h2 class="product">Nonprofit&nbsp;Cloud &amp; NPSP</h2>
         </div>
-        <span class="pill pill-ok">Building</span>
+        <span class="pill pill-cat">Fundraising</span>
       </div>
-      <p class="syncs">Two-way</p>
       <ul>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Contacts, households, donations and campaigns</li>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Works with either data model &mdash; we detect which one your org runs</li>
@@ -174,8 +183,8 @@
       </ul>
       <p class="note">Connect with a Salesforce administrator login. Sandbox and My&nbsp;Domain orgs supported.</p>
       <div class="spacer"></div>
-      <button class="btn" data-key="salesforce" data-label="Salesforce">Request early access</button>
-      <p class="confirm" data-confirm="salesforce" hidden></p>
+      <a class="btn" href="#" data-key="salesforce" data-label="Salesforce" target="_blank" rel="noopener">Book setup call</a>
+      <p class="confirm" data-confirm="salesforce">30 minutes, with your data in front of us.</p>
     </article>
 
     <article class="card">
@@ -184,9 +193,8 @@
           <p class="vendor">Bonterra</p>
           <h2 class="product">Apricot</h2>
         </div>
-        <span class="pill pill-warn">In design</span>
+        <span class="pill pill-case">Case management</span>
       </div>
-      <p class="syncs">Case management</p>
       <ul>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Participants, programmes and enrolments</li>
         <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Services delivered and outcomes, ready for funder reporting</li>
@@ -194,77 +202,60 @@
       </ul>
       <p class="note"><b>Needs Apricot Enterprise or Pro.</b> Case records carry stricter consent rules, so we are scoping this one carefully.</p>
       <div class="spacer"></div>
-      <button class="btn" data-key="apricot" data-label="Apricot">Request early access</button>
-      <p class="confirm" data-confirm="apricot" hidden></p>
+      <a class="btn" href="#" data-key="apricot" data-label="Apricot" target="_blank" rel="noopener">Book setup call</a>
+      <p class="confirm" data-confirm="apricot">30 minutes, with your data in front of us.</p>
     </article>
 
   </div>
 
   <section class="other">
-    <h2>Using something else?</h2>
-    <p>Name it and we will count it. What our customers actually run decides what we build after these three.</p>
+    <h2>Don&rsquo;t see yours?</h2>
+    <p>Name the system your team uses. What our customers actually run decides what we add to the marketplace next.</p>
     <div class="row">
       <label for="other-name" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">Name the system you use</label>
       <input type="text" id="other-name" placeholder="DonorPerfect, Bloomerang, a spreadsheet&hellip;" autocomplete="off">
-      <button class="btn-ghost" id="other-send">Tell us</button>
+      <button class="btn-ghost" id="other-send">Send</button>
     </div>
     <p class="confirm" id="other-confirm" style="text-align:left;" hidden></p>
   </section>
 
   <footer>
-    <span>Pilot opens Q1 2027</span>
+    <span>Setup calls run Tuesdays and Thursdays</span>
     <span>Questions? Ask your ConConnect contact.</span>
   </footer>
 </div>
 
 <script>
 (function(){
-  var KEY = 'ccn.integration.interest.v1';
-  var state = {};
-  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  // ── Swap this for your HubSpot meetings link before shipping. ───────────────
+  // A per-integration link can be set with data-booking on the card's button.
+  var BOOKING_URL = 'https://meetings.hubspot.com/REPLACE-ME';
 
-  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-
-  function mark(btn, label){
-    btn.setAttribute('aria-pressed','true');
-    btn.textContent = 'Requested';
-    btn.disabled = true;
-    var c = document.querySelector('[data-confirm="' + btn.dataset.key + '"]');
-    if (c){ c.textContent = 'Noted. We will come to you before ' + label + ' opens.'; c.hidden = false; }
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('.btn[data-key]'), function(btn){
-    var label = btn.dataset.label.replace(/&rsquo;/g, '’');
-    if (state[btn.dataset.key]) { mark(btn, label); }
-    btn.addEventListener('click', function(){
-      if (state[btn.dataset.key]) return;
-      state[btn.dataset.key] = new Date().toISOString();
-      save();
-      mark(btn, label);
-    });
+  Array.prototype.forEach.call(document.querySelectorAll('.btn[data-key]'), function(a){
+    var url = a.dataset.booking || BOOKING_URL;
+    var sep = url.indexOf('?') === -1 ? '?' : '&';
+    a.href = url + sep + 'integration=' + encodeURIComponent(a.dataset.key);
   });
 
   var input = document.getElementById('other-name');
   var send  = document.getElementById('other-send');
   var conf  = document.getElementById('other-confirm');
+  var named = [];
 
   function submitOther(){
     var v = input.value.trim();
     if (!v){ input.focus(); return; }
-    state.other = state.other || [];
-    state.other.push({ name: v, at: new Date().toISOString() });
-    save();
+    named.push(v);
     input.value = '';
-    conf.textContent = 'Got it — ' + v + ' is on the list.';
+    conf.textContent = named.length === 1
+      ? 'Thanks \u2014 ' + named[0] + ' is on the list.'
+      : 'Thanks \u2014 on the list: ' + named.join(', ') + '.';
     conf.hidden = false;
   }
 
   send.addEventListener('click', submitOther);
-  input.addEventListener('keydown', function(e){ if (e.key === 'Enter'){ e.preventDefault(); submitOther(); } });
-
-  if (state.other && state.other.length){
-    conf.textContent = 'You have already told us about ' + state.other.map(function(o){ return o.name; }).join(', ') + '.';
-    conf.hidden = false;
-  }
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){ e.preventDefault(); submitOther(); }
+  });
 })();
 </script>
