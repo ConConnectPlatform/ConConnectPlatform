@@ -1,0 +1,285 @@
+<!--
+  ConConnect CRM — Integrations marketplace page
+  ------------------------------------------------------------------
+  Drop-in partial. Paste this whole file into a page template.
+
+  Everything is scoped under .ccn-mkt so it cannot collide with the
+  app's existing styles, and the tokens are declared on .ccn-mkt rather
+  than :root for the same reason. No top navigation here — the app
+  shell provides that; see integration-notes.md for the one nav entry
+  to add.
+
+  Before shipping:
+    1. Set BOOKING_URL at the bottom to the real HubSpot meetings link.
+    2. Replace the palette with the app's own tokens if it has them
+       (these were read off the Untapped email templates, not staging).
+    3. Wire the tracking events from docs/12-integration-marketplace.md.
+-->
+<style>
+  .ccn-mkt{
+    --bg:#EEF2F5; --surface:#FFFFFF; --tint:#F2F9FD;
+    --ink:#1A1A1A; --ink-2:#3C484F; --ink-3:#7A878E;
+    --line:#D8EBF4; --line-2:#E4EAEF;
+    --brand:#1B7CAF; --brand-soft:#F2F9FD;
+    --action:#F26522; --action-ink:#FFFFFF;
+    --shadow:0 1px 2px rgba(16,47,64,.06), 0 10px 26px -14px rgba(16,47,64,.22);
+    --mkt-display:'Archivo','Helvetica Neue',Arial,sans-serif;
+    --mkt-body:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;
+    --mkt-mono:'IBM Plex Mono',ui-monospace,'SF Mono',Menlo,monospace;
+
+    max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:0 56px;
+    background:var(--bg);color:var(--ink);font-family:var(--mkt-body);
+    font-size:14px;line-height:1.55;box-sizing:border-box;
+  }
+  .ccn-mkt *,.ccn-mkt *::before,.ccn-mkt *::after{box-sizing:border-box;}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .ccn-mkt{
+      --bg:#0B1E29; --surface:#102F40; --tint:#14384B;
+      --ink:#EAF7FC; --ink-2:#B9DCEB; --ink-3:#8AA7B7;
+      --line:#1D4256; --line-2:#183746;
+      --brand:#67D5F5; --brand-soft:#14384B;
+      --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 26px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] .ccn-mkt{
+    --bg:#0B1E29; --surface:#102F40; --tint:#14384B;
+    --ink:#EAF7FC; --ink-2:#B9DCEB; --ink-3:#8AA7B7;
+    --line:#1D4256; --line-2:#183746;
+    --brand:#67D5F5; --brand-soft:#14384B;
+    --shadow:0 1px 2px rgba(0,0,0,.45), 0 10px 26px -14px rgba(0,0,0,.7);
+  }
+
+  .ccn-mkt header{padding-block:36px 8px;border-bottom:1px solid var(--line);margin-bottom:32px;}
+  .ccn-mkt .eyebrow{font-family:var(--mkt-mono);font-size:11px;letter-spacing:.13em;
+        text-transform:uppercase;color:var(--ink-3);margin:0 0 13px;}
+  .ccn-mkt h1{font-family:var(--mkt-display);font-weight:800;font-size:clamp(28px,5vw,40px);
+        line-height:1.08;letter-spacing:-.028em;margin:0 0 13px;text-wrap:balance;color:var(--ink);}
+  .ccn-mkt .lede{margin:0 0 28px;font-size:16.5px;color:var(--ink-2);max-width:62ch;}
+  .ccn-mkt .lede b{color:var(--ink);font-weight:600;}
+
+  .ccn-mkt .steps{list-style:none;display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:16px;margin:0 0 32px;padding:0;}
+  .ccn-mkt .steps li{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);}
+  .ccn-mkt .steps .num{flex-shrink:0;width:22px;height:22px;border-radius:50%;
+        background:var(--brand-soft);color:var(--brand);font-family:var(--mkt-mono);font-size:11px;
+        display:flex;align-items:center;justify-content:center;margin-top:1px;border:1px solid var(--line);}
+  .ccn-mkt .steps b{display:block;color:var(--ink);font-weight:600;font-size:14px;margin-bottom:1px;}
+
+  .ccn-mkt .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));
+        gap:18px;align-items:stretch;}
+  .ccn-mkt .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;
+        box-shadow:var(--shadow);padding:20px;display:flex;flex-direction:column;min-width:0;}
+  .ccn-mkt .card-top{display:flex;justify-content:space-between;align-items:flex-start;
+        gap:10px;margin-bottom:15px;}
+  .ccn-mkt .vendor{font-family:var(--mkt-mono);font-size:10.5px;letter-spacing:.11em;
+        text-transform:uppercase;color:var(--ink-3);margin:0 0 5px;}
+  .ccn-mkt .product{font-family:var(--mkt-display);font-weight:700;font-size:18.5px;
+        line-height:1.22;letter-spacing:-.018em;margin:0;color:var(--ink);}
+  .ccn-mkt .pill{font-family:var(--mkt-mono);font-size:9.5px;letter-spacing:.07em;
+        text-transform:uppercase;padding:4px 8px;border-radius:999px;white-space:nowrap;
+        flex-shrink:0;background:var(--brand-soft);color:var(--brand);border:1px solid var(--line);}
+  .ccn-mkt ul.feats{list-style:none;margin:0 0 15px;padding:0;display:flex;flex-direction:column;
+        gap:7px;font-size:13.5px;color:var(--ink-2);}
+  .ccn-mkt ul.feats li{display:flex;gap:9px;align-items:flex-start;}
+  .ccn-mkt ul.feats svg{flex-shrink:0;margin-top:5px;color:var(--brand);}
+  .ccn-mkt .note{font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--line-2);
+        padding-top:12px;margin:0 0 15px;}
+  .ccn-mkt .note b{color:var(--action);font-weight:600;}
+  .ccn-mkt .spacer{flex:1;}
+
+  .ccn-mkt .btn{display:block;width:100%;text-align:center;text-decoration:none;
+        background:var(--action);color:var(--action-ink);border:1px solid transparent;
+        border-radius:7px;padding:11px 14px;font-family:var(--mkt-display);font-weight:600;
+        font-size:14.5px;letter-spacing:-.005em;transition:opacity .15s;}
+  .ccn-mkt .btn:hover{opacity:.88;}
+  .ccn-mkt .btn:focus-visible{outline:2px solid var(--action);outline-offset:2px;}
+  .ccn-mkt .confirm{font-size:12px;color:var(--ink-3);margin:8px 0 0;text-align:center;}
+
+  .ccn-mkt .other{margin-top:18px;background:var(--tint);border:1px dashed var(--line);
+        border-radius:10px;padding:20px;}
+  .ccn-mkt .other h2{font-family:var(--mkt-display);font-weight:700;font-size:17px;
+        margin:0 0 5px;letter-spacing:-.018em;color:var(--ink);}
+  .ccn-mkt .other p{margin:0 0 14px;font-size:14px;color:var(--ink-2);max-width:60ch;}
+  .ccn-mkt .row{display:flex;gap:10px;flex-wrap:wrap;}
+  .ccn-mkt input[type=text]{flex:1 1 220px;min-width:0;background:var(--surface);color:var(--ink);
+        border:1px solid var(--line);border-radius:7px;padding:10px 12px;font:inherit;font-size:14.5px;}
+  .ccn-mkt input[type=text]::placeholder{color:var(--ink-3);}
+  .ccn-mkt input[type=text]:focus-visible{outline:2px solid var(--brand);outline-offset:1px;
+        border-color:var(--brand);}
+  .ccn-mkt .btn-ghost{flex:0 0 auto;background:transparent;color:var(--brand);cursor:pointer;
+        border:1px solid var(--brand);border-radius:7px;padding:10px 18px;font:inherit;
+        font-family:var(--mkt-display);font-weight:600;font-size:14.5px;}
+  .ccn-mkt .btn-ghost:hover{background:var(--brand-soft);}
+  .ccn-mkt .btn-ghost:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+
+  .ccn-mkt footer{margin-top:32px;padding-top:18px;border-top:1px solid var(--line);
+        font-size:12.5px;color:var(--ink-3);display:flex;gap:10px;flex-wrap:wrap;
+        justify-content:space-between;font-family:var(--mkt-mono);letter-spacing:.04em;}
+  .ccn-mkt .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+  @media (prefers-reduced-motion: reduce){.ccn-mkt *{transition:none!important;}}
+</style>
+
+<section class="ccn-mkt" aria-labelledby="ccn-mkt-title">
+  <header>
+    <p class="eyebrow">Marketplace</p>
+    <h1 id="ccn-mkt-title">Integrations</h1>
+    <p class="lede">Keep the people and programs you track in Untapped in step with the systems your team already works in. <b>Every integration is set up with us on a call</b> &mdash; you do not configure anything yourself.</p>
+
+    <ol class="steps">
+      <li><span class="num">1</span><div><b>Book a call</b>Pick a time that suits your team. Thirty minutes.</div></li>
+      <li><span class="num">2</span><div><b>We configure it with you</b>We connect your account and map your fields on the call.</div></li>
+      <li><span class="num">3</span><div><b>Your data stays in step</b>Records flow between both systems from then on.</div></li>
+    </ol>
+  </header>
+
+  <div class="grid">
+
+    <article class="card">
+      <div class="card-top">
+        <div><p class="vendor">Blackbaud</p><h2 class="product">Raiser&rsquo;s Edge NXT</h2></div>
+        <span class="pill">Fundraising</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Constituents, gifts, pledges and recurring gifts</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Split gifts, soft credits and tributes kept intact</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Your full fund, campaign, appeal and package structure</li>
+      </ul>
+      <p class="note">Built on the SKY API. Untapped is a Blackbaud ISV partner.</p>
+      <div class="spacer"></div>
+      <a class="btn" href="#" data-key="renxt">Book setup call</a>
+      <p class="confirm">30 minutes, with your data in front of us.</p>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div><p class="vendor">Salesforce</p><h2 class="product">Nonprofit Cloud &amp; NPSP</h2></div>
+        <span class="pill">Fundraising</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Contacts, households, donations and campaigns</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Works with either data model &mdash; we detect which one your org runs</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Leaves your existing rollups and automations alone</li>
+      </ul>
+      <p class="note">Connect with a Salesforce administrator login. Sandbox and My&nbsp;Domain orgs supported.</p>
+      <div class="spacer"></div>
+      <a class="btn" href="#" data-key="salesforce">Book setup call</a>
+      <p class="confirm">30 minutes, with your data in front of us.</p>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div><p class="vendor">Bonterra</p><h2 class="product">Apricot</h2></div>
+        <span class="pill">Case management</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Participants, programs and enrolments</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Services delivered and outcomes, ready for funder reporting</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Your own Apricot forms and fields, not a fixed template</li>
+      </ul>
+      <p class="note"><b>Needs Apricot Enterprise or Pro.</b> Case records carry stricter consent rules, so we scope this one carefully.</p>
+      <div class="spacer"></div>
+      <a class="btn" href="#" data-key="apricot">Book setup call</a>
+      <p class="confirm">30 minutes, with your data in front of us.</p>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div><p class="vendor">Intuit</p><h2 class="product">Mailchimp</h2></div>
+        <span class="pill">Email</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Your audiences stay current as people move through programs</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Tags and merge fields mapped to the data you already collect</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Opens and clicks come back onto the record</li>
+      </ul>
+      <p class="note"><b>Unsubscribes are never overwritten.</b> Mailchimp stays the authority on who may be emailed.</p>
+      <div class="spacer"></div>
+      <a class="btn" href="#" data-key="mailchimp">Book setup call</a>
+      <p class="confirm">30 minutes, with your data in front of us.</p>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div><p class="vendor">HubSpot</p><h2 class="product">Marketing &amp; CRM</h2></div>
+        <span class="pill">CRM</span>
+      </div>
+      <ul class="feats">
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Contacts and companies, with your own properties</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Funder and partner pipelines kept in step with deals</li>
+        <li><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 6.4l3.2 3.2L11 2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Form submissions land straight on the right record</li>
+      </ul>
+      <p class="note">Connect with a HubSpot account that can grant CRM access.</p>
+      <div class="spacer"></div>
+      <a class="btn" href="#" data-key="hubspot">Book setup call</a>
+      <p class="confirm">30 minutes, with your data in front of us.</p>
+    </article>
+
+  </div>
+
+  <section class="other">
+    <h2>Don&rsquo;t see yours?</h2>
+    <p>Name the system your team uses. What our customers actually run decides what we add to the marketplace next.</p>
+    <div class="row">
+      <label class="sr" for="other-name">Name the system you use</label>
+      <input type="text" id="other-name" placeholder="DonorPerfect, Bloomerang, a spreadsheet&hellip;" autocomplete="off">
+      <button class="btn-ghost" id="other-send">Send</button>
+    </div>
+    <p class="confirm" id="other-confirm" style="text-align:left;" hidden></p>
+  </section>
+
+  <footer>
+    <span>Setup calls run Tuesdays and Thursdays</span>
+    <span>Serving those who serve others.</span>
+  </footer>
+</section>
+<script>
+(function(){
+  var root = document.querySelector('.ccn-mkt');
+  if (!root) return;
+
+  // ── Set this to the real HubSpot meetings link. ───────────────────────────
+  var BOOKING_URL = 'https://meetings.hubspot.com/REPLACE-ME';
+
+  // Replace with the app's own analytics call.
+  function track(event, props){
+    if (window.mixpanel && window.mixpanel.track) window.mixpanel.track(event, props);
+  }
+
+  Array.prototype.forEach.call(root.querySelectorAll('.btn[data-key]'), function(a, i){
+    var url = a.dataset.booking || BOOKING_URL;
+    var sep = url.indexOf('?') === -1 ? '?' : '&';
+    a.href = url + sep + 'integration=' + encodeURIComponent(a.dataset.key);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.addEventListener('click', function(){
+      track('integration_booking_clicked', { provider: a.dataset.key, card_position: i + 1,
+                                             surface: 'marketplace' });
+    });
+  });
+
+  track('marketplace_viewed', { surface: 'marketplace' });
+
+  var input = root.querySelector('#other-name');
+  var send  = root.querySelector('#other-send');
+  var conf  = root.querySelector('#other-confirm');
+  var named = [];
+
+  function submitOther(){
+    var v = input.value.trim();
+    if (!v){ input.focus(); return; }
+    track('marketplace_other_submitted', { provider: 'other', provider_other: v,
+                                           surface: 'marketplace' });
+    named.push(v);
+    input.value = '';
+    conf.textContent = named.length === 1
+      ? 'Thanks — ' + named[0] + ' is on the list.'
+      : 'Thanks — on the list: ' + named.join(', ') + '.';
+    conf.hidden = false;
+  }
+
+  send.addEventListener('click', submitOther);
+  input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){ e.preventDefault(); submitOther(); }
+  });
+})();
+</script>
