@@ -96,17 +96,48 @@ financial-record retention. Confirm with counsel (Q7 in [09](09-open-questions.m
   nonprofit's behalf. That requires a DPA with each customer and sub-processor
   disclosure. Worth having ready before enterprise sales conversations, not during.
 
-### Case-management data: a different regime
+### Case-management data: the governing constraint, not a caveat
 
-Bonterra Apricot and ETO hold **service-delivery records about vulnerable people** —
-case notes, assessments, programme participation. Depending on the customer and
-programme this can attract HIPAA, 42 CFR Part 2 (substance-use treatment records,
-which are stricter than HIPAA), FERPA, or state confidentiality law.
+**Bonterra Apricot is confirmed in scope**, which makes this section the strictest
+requirement in this document rather than a footnote about a deferred provider.
 
-**This is not "another CRM connector."** It requires its own data model, its own
-compliance review, likely a BAA, and possibly separate infrastructure. The
-recommendation in [`providers/bonterra.md`](providers/bonterra.md) stands: out of scope
-for v1, treated as a separate initiative with legal involvement from the start.
+Apricot holds **service-delivery records about vulnerable people** — case notes,
+assessments, demographics, programme participation. For ConConnect's customer base,
+which serves reentry and justice-involved populations, the realistic exposure includes:
+
+- **42 CFR Part 2** — substance-use disorder treatment records. Stricter than HIPAA.
+  Requires specific, purpose-limited consent, and **redisclosure without that consent
+  is itself the violation** — which is precisely what an integration does by default.
+- **HIPAA** — where health services are delivered. May require a BAA.
+- **State confidentiality and criminal-justice-record law** — varies by jurisdiction,
+  and our customers span several.
+- **FERPA** — where education programmes are involved.
+
+Some of this data is more sensitive than anything in a donor database. A breach
+affects people whose housing, employment and liberty may depend on that
+confidentiality. That is a different order of consequence from a leaked donor list.
+
+Requirements before a single Apricot field is read or written:
+
+1. **Counsel reviews which regimes apply** across the customer base, and whether BAAs
+   are required. This has legal lead time; start it in parallel with design, not after.
+2. **Decide explicitly what content is synced.** Case-note and assessment *bodies* may
+   be excluded entirely, with only structured fields and metadata flowing.
+   "Sync everything" is the wrong default here, and minimum-necessary is a legal
+   standard, not a preference.
+3. **Model consent and release-of-information as data**, not as an assumption. A
+   record's consent scope has to travel with it and has to be enforceable at the point
+   of disclosure.
+4. **Read-only first.** It delivers value while deferring the hardest redisclosure
+   questions until they are properly understood. See Q1b in
+   [09](09-open-questions.md).
+5. **Segregate.** Case-management data should not share storage, logging, or access
+   paths with donor data without a deliberate decision that it may.
+
+This reverses the earlier draft's recommendation to keep Apricot out of v1. It is in
+scope because it is the customers' actual domain — but it needs its own data model
+(see [`providers/bonterra.md`](providers/bonterra.md)), its own compliance review, and
+legal involvement from the start.
 
 Building it as an afterthought inside a donor-data service would be the most serious
 mistake available on this project.

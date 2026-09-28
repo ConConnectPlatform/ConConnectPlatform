@@ -15,15 +15,19 @@ Read in order. Each document states its own decisions and open questions.
 | 08 | [Security & compliance](08-security-and-compliance.md) | PII, encryption, audit, case-management data |
 | 09 | [Open questions](09-open-questions.md) | Decisions needed before/during build |
 | 10 | [Roadmap](10-roadmap.md) | Phasing and rough sequencing |
+| 11 | [Partnership status](11-partnership-status.md) | Blackbaud ISV standing, outstanding obligations, programme contacts |
 
 Provider-specific research and integration notes:
 
 - [Salesforce (NPSP + Nonprofit Cloud)](providers/salesforce.md)
 - [Blackbaud Raiser's Edge NXT (SKY API)](providers/blackbaud-renxt.md)
-- [Bonterra (EveryAction / Apricot / ETO)](providers/bonterra.md)
+- [Bonterra Apricot](providers/bonterra.md)
 - [Adding a new provider](providers/adding-a-provider.md)
 
 Machine-readable contract sketch: [`api/openapi.yaml`](api/openapi.yaml)
+
+Where the vendor documentation lives and what to read first:
+[`reference/api-docs-index.md`](reference/api-docs-index.md)
 
 ## How to read the confidence markers
 

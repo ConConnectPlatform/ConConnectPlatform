@@ -5,27 +5,31 @@ implementation starts; the rest can be resolved during phase 1.
 
 ---
 
-## Q1 — Which Bonterra products do our customers actually use? ⛔ blocking
+## Q1 — Which Bonterra product? ✅ RESOLVED — Apricot
 
-**Why it matters more than any other question here.** Bonterra is a portfolio, not a
-product ([`providers/bonterra.md`](providers/bonterra.md)). The candidates are
-different projects, not different configurations:
+**Answered September 2026: Bonterra Apricot** (also sold as Bonterra Case Management
+/ Impact Management). Blackbaud means **Raiser's Edge NXT**. Salesforce is confirmed.
 
-- **EveryAction / NGP VAN** — fundraising and advocacy. Documented REST API. Maps well
-  onto our canonical model. Support-issued keys, so slow onboarding.
-- **Apricot / Impact Management** — case management. No gift object. Licence-gated API.
-  Different compliance regime. Would require extending the canonical model
-  substantially.
-- **ETO** — case management, password-based auth, same considerations as Apricot.
-- **CyberGrants / Network for Good / Salsa** — unassessed.
+This resolves the blocking question, and it changes scope in two ways that are now
+tracked as work rather than as questions — see
+[`providers/bonterra.md`](providers/bonterra.md):
 
-Building the wrong one is weeks of wasted work, and "Bonterra support" is a claim we
-cannot honestly make to customers without naming products.
+- **Apricot is case management, not fundraising.** It has no native gift object. The
+  canonical model needs client / programme / enrolment / service / assessment /
+  outcome entities, which [02](02-canonical-data-model.md) does not yet have.
+- **The compliance posture is stricter than donor data.** For reentry and
+  justice-involved populations, 42 CFR Part 2, HIPAA and state confidentiality rules
+  are realistically in play. This is now the governing constraint on the provider,
+  not a caveat. See [08](08-security-and-compliance.md).
 
-**Needed**: the actual product names from the customers or prospects driving this
-requirement.
+New questions arising, none of them blocking the Salesforce work:
 
----
+- **Q1a** — Which of our customers are on Apricot **Enterprise or Pro**? Lower tiers
+  cannot be integrated at all; the API is licence-gated.
+- **Q1b** — Read-only or bi-directional for case data? Read-only is a much easier
+  compliance story for service-delivery records and may be sufficient for the product.
+- **Q1c** — Does `developer.bonterra.network` expose Apricot data under OAuth 2.0? If
+  so it changes the integration approach; it could not be read from this environment.
 
 ## Q2 — Which direction does data move, and is ConConnect ever the source of truth? ⛔ blocking
 
@@ -106,6 +110,12 @@ Needed:
 determines how many Blackbaud customers we can serve, which is a commercial planning
 input, not just an engineering detail.
 
+**Update:** we have a named channel for this. ConConnect has been in Blackbaud's ISV
+Program since March 2026, so the rate-limit conversation goes to the partner program
+rather than a generic support queue — and it should be raised in the same message that
+answers the outstanding ISV status enquiry. See
+[11](11-partnership-status.md).
+
 ---
 
 ## Q7 — Retention and erasure policy
@@ -125,11 +135,12 @@ Every **VERIFY** marker in these docs closes with a sandbox. Needed:
 
 - **Salesforce**: easy — Developer Edition orgs. Need one NPSP, one Nonprofit Cloud,
   and one with both installed to exercise ambiguous detection.
-- **Blackbaud RE NXT**: no self-service developer sandbox. **Start this request
-  immediately** — it has vendor lead time and blocks closing out the Blackbaud
-  questions.
-- **Bonterra**: depends on Q1, and EveryAction keys come through support with days-to-weeks
-  of lead time. **Also start immediately.**
+- **Blackbaud RE NXT**: no self-service developer sandbox, but our ISV Program
+  enrolment gives us a direct route to ask. Request it through the partner contacts
+  we already have ([11](11-partnership-status.md)) rather than through generic
+  support.
+- **Bonterra Apricot**: no relationship established, and API access is licence-gated
+  to Enterprise/Pro. **Start this immediately** — it is now the longest-lead item.
 
 These are the longest-lead items on the project and they are not parallel to
 implementation — they gate it.
@@ -150,10 +161,16 @@ absorbed into phase 1 silently.
 
 ## Q10 — Commercial and partnership questions
 
-- Do we need formal ISV/partner status with Salesforce, Blackbaud, or Bonterra? This can
-  affect rate limits, support quality, marketplace listing, and access to sandboxes.
-  Blackbaud and Bonterra both look like cases where a partnership conversation moves
-  faster than documentation archaeology.
+- **Blackbaud: answered — we are already an ISV partner** (since March 2026), also in
+  the Social Good Startup Program. That gives us app registration, subscription keys,
+  sandbox access and the rate-limit conversation through a named channel. It also
+  carries two outstanding obligations, one overdue and one with a deboarding risk
+  attached: see [11](11-partnership-status.md).
+- **Salesforce**: self-service is enough to start. A formal ISV/AppExchange path
+  matters only for marketplace listing.
+- **Bonterra**: no relationship yet, and worth establishing — a partner conversation
+  will be faster than documentation archaeology, especially with the developer portal
+  unreadable and the API licence-gated.
 - Is a customer-facing "which CRMs do you support, and how completely" matrix a
   deliverable? The capability matrix in [03](03-provider-adapter-contract.md) can
   generate one, which is a genuinely honest and differentiating thing to publish.

@@ -1,202 +1,152 @@
-# Provider: Bonterra
+# Provider: Bonterra Apricot
 
-**Provider ids**: `bonterra_everyaction`, `bonterra_apricot`, `bonterra_eto`
-(more may be needed — see below)
+**Provider id**: `bonterra_apricot`
+**Status**: confirmed as the Bonterra product in scope (September 2026), superseding
+the earlier open question about which Bonterra product our customers run.
 
-## Read this first: Bonterra is not a CRM
+## Read this first: Apricot is case management, not fundraising
 
-Bonterra is a **portfolio company**, assembled from acquisitions. "Integrate with
-Bonterra" is not a single piece of work, and we should not describe it as one to
-customers. The products have different APIs, different authentication, different data
-models, and different commercial gates.
+Bonterra is a portfolio company assembled from acquisitions — EveryAction/NGP VAN,
+Apricot, ETO, CyberGrants, Network for Good, Salsa — with different APIs, different
+authentication and different commercial terms. The product we are integrating is
+**Apricot**, also sold as **Bonterra Case Management** and **Bonterra Impact
+Management**.
 
-Known products with relevance to us:
+Apricot models **clients, programmes, services, forms, assessments and outcomes**.
+It does not model donations. There is **no native gift object** to map to the Gift
+entity in [02](../02-canonical-data-model.md).
 
-| Product | Also known as | Domain | API status |
-|---|---|---|---|
-| **EveryAction** | NGP VAN, EA8 | Fundraising, advocacy, organising, supporter engagement | Documented REST API at `api.securevan.com/v4` |
-| **Apricot** | Bonterra Case Management, Impact Management | Case management, service delivery, outcomes | API exists; **licence-gated to Enterprise and Pro** |
-| **ETO** | Bonterra ETO | Case management (enterprise//government) | REST API with a security/login endpoint |
-| **Others** | CyberGrants, Network for Good, Salsa, EveryAction Advocacy | Corporate giving, small-nonprofit fundraising, advocacy | Unassessed |
+This fits ConConnect's customers, who run reentry and second-chance programmes and
+whose core work is service delivery rather than fundraising. It is the right product
+to integrate. But it means two things have to change, and neither is a detail:
 
-**Q1 in [09](../09-open-questions.md) is the blocking question: which Bonterra
-products do our customers actually use?** Everything below is preparation; the
-sequencing depends on that answer. Building the wrong one is weeks of wasted work.
+### 1. The canonical data model needs case-management entities
 
-⚠ **Documentation gap.** `developer.bonterra.network`, `docs.everyaction.com` and the
-Bonterra community sites were **unreachable from the authoring environment** (network
-egress policy). The material below is assembled from search summaries and third-party
-integration guides. Treat **every** specific here as **VERIFY**, and read the primary
-portals before writing code.
+[02](../02-canonical-data-model.md) was designed around donor data — constituents,
+gifts, commitments, designations. Apricot needs entities that document does not yet
+have:
 
----
-
-## Bonterra EveryAction / NGP VAN
-
-The most likely first target: it is the fundraising product, it has a real public API
-reference, and it is what "Bonterra" most often means for a nonprofit doing donor
-management.
-
-### API surface
-
-- Base URL: `https://api.securevan.com/v4/` (**VERIFY**)
-- REST/JSON. Resource areas include people, contributions, recurring commitments,
-  disbursements, events, survey questions, activist codes, and canvass responses.
-- People matching is a first-class API concept (`people/find`, `people/findOrCreate`
-  — **VERIFY** exact paths). This is valuable: it means we can defer to the provider's
-  own matching rather than inventing our own, which is both safer and cheaper.
-
-### Auth — and the onboarding consequence
-
-- **HTTP Basic**, where the username is the **application name** and the password is
-  the **API key**, conventionally suffixed with a mode indicator (`|0` / `|1`) that
-  selects the voter-file context versus the campaign/CRM context. **VERIFY** the exact
-  format and which mode corresponds to donor data — getting this wrong points the
-  integration at the wrong database.
-- **Keys are issued by vendor support**, not by an OAuth flow: the customer files a
-  support request in the EveryAction UI naming the application, and the key is
-  delivered to a designated contact via a **one-time link** that expires, alongside a
-  **four-digit key reference** used to identify it later.
-
-This is the most important product fact on this page. There is **no self-service
-connect**, no OAuth redirect, and no programmatic issuance. Every EveryAction customer
-onboarding involves a human, a support ticket, and vendor lead time measured in days
-to weeks.
-
-Design consequences:
-
-- The connect flow must support a **`pending` connection state** where the customer has
-  filed the request and is waiting, with the four-digit key reference recorded so
-  support conversations can be matched up.
-- Onboarding documentation must tell customers to start the key request **first**, in
-  parallel with everything else.
-- The API surfaces the expected lead time in the connect response
-  ([06](../06-public-api.md#connections)) so the UI can set honest expectations.
-- Keys are long-lived and do not rotate automatically: compromise is more damaging and
-  rotation is manual. Provide an explicit "replace key" flow and alert on auth failures.
-
-### Change detection — `changedEntityExportJobs`
-
-Delta is an **asynchronous export job**, not a query:
-
-1. `POST /changedEntityExportJobs` with job parameters including `dateChangedFrom`.
-2. Poll `GET /changedEntityExportJobs/{exportJobId}` for status and content.
-3. On completion, download **one or more files** containing every record changed
-   between `dateChangedFrom` and a **server-generated `dateChangedTo`**.
-
-Implications:
-
-- Persist the **server's** `dateChangedTo` as the next `dateChangedFrom`. Using a
-  locally computed timestamp opens a gap the width of your clock skew.
-- The worker downloads and parses files; this is not JSON page iteration. Raw files go
-  to object storage for replay and debugging.
-- This is inherently **batch**. Near-real-time sync is not available through this
-  mechanism. **VERIFY** typical job completion time and any per-day job limits, then
-  set the poll cadence and customer expectations from real numbers.
-- **VERIFY** whether exports include **deletions**, and which entity types are
-  supported.
-
-### Mapping notes
-
-| Canonical | EveryAction (**all VERIFY**) |
+| Needed entity | Represents |
 |---|---|
-| Constituent | person |
-| Gift | contribution |
-| Commitment | recurring commitment |
-| Designation | designation / fund / appeal (hierarchy depth unclear) |
-| Activity | canvass response, activist code application, event signup |
-| Tags | activist codes |
+| **Client** | A person receiving services. Maps loosely onto Constituent, but the fields that matter are different — intake status, eligibility, case assignment, demographics collected for grant reporting. |
+| **Programme** | A service offering the organisation runs. |
+| **Enrolment** | A client's participation in a programme, with start/exit dates and exit reason. |
+| **Service / Encounter** | A delivered unit of service: a session, a placement, a referral. This is what gets counted for funder reporting. |
+| **Assessment** | A structured, form-based evaluation with scored responses, administered repeatedly over time. |
+| **Outcome** | A measured result tied to a programme goal — the thing funders actually pay for. |
+| **Form / Record definition** | Apricot is form-driven, so its schema is substantially customer-defined. This may be closer to schema discovery than to fixed mapping. |
 
-Open mapping questions: split-gift support, soft-credit fidelity, and write coverage
-(the capability matrix currently guesses `partial` for writes — that guess must be
-replaced with tested fact).
+The Gift/Commitment/Designation half of the canonical model stays for Salesforce and
+Blackbaud. Apricot uses the constituent half plus these new entities. That is a
+genuine extension of scope, and it should be planned as one rather than absorbed
+quietly.
 
-Note also that EveryAction carries **political/electoral** data structures (voter
-file, committees, modes). Our canonical model is deliberately nonprofit-fundraising
-shaped and does not attempt to represent the voter file. If a customer needs electoral
-data, that is a separate scoping conversation, not a mapping exercise.
+**This reverses the recommendation in the earlier draft**, which proposed keeping
+Apricot out of v1 on the grounds that it was a different domain. It *is* a different
+domain — but it is the customers' domain, so it belongs in scope. What does not
+change is that it needs its own data model and its own compliance review.
+
+### 2. The compliance posture is materially stricter
+
+Apricot holds **service-delivery records about vulnerable people**: case notes,
+assessments, programme participation, and demographics.
+
+For ConConnect's customer base — reentry and justice-involved populations — the
+realistic exposure includes **42 CFR Part 2** (substance-use disorder treatment
+records, stricter than HIPAA and requiring specific consent handling), **HIPAA**
+where health services are delivered, and state-level confidentiality and criminal-
+justice-record rules. Some of this data is more sensitive than anything in a donor
+database, and a breach affects people whose housing, employment and liberty may
+depend on that confidentiality.
+
+Concretely, before a single Apricot field is written:
+
+- Counsel reviews which regimes apply across the customer base, and whether a BAA is
+  required.
+- Decide explicitly whether case-note and assessment **content** is synced at all, or
+  only metadata and structured fields. Defaulting to "sync everything" is the wrong
+  default here.
+- Consent and release-of-information handling must be modelled, not inferred — under
+  42 CFR Part 2, redisclosure without specific consent is the violation.
+- Data residency, retention, minimum necessary, and audit requirements all get
+  stricter than [08](../08-security-and-compliance.md) currently assumes.
+
+See [08](../08-security-and-compliance.md#case-management-data-a-different-regime).
+That section was written when Apricot was out of scope and now needs to be the
+governing document for this provider rather than a caveat.
 
 ---
 
-## Bonterra Apricot / Impact Management
+## ⚠ Commercial gate
 
-### ⚠ Commercial gate
+**Apricot API access requires an Enterprise or Pro licence.** A customer on a lower
+tier cannot be integrated regardless of engineering effort.
 
-**API access requires an Apricot Enterprise or Pro licence.** A customer on a lower
-tier cannot be integrated regardless of engineering effort. The connect flow must
-detect this and say so plainly; discovering it during an implementation call is a bad
-experience for everyone.
+The connect flow must detect and explain this plainly — discovering it during an
+implementation call is a bad experience for the customer and for us. It is also a
+qualification question for sales: knowing a prospect's Apricot tier before promising
+an integration avoids a commitment we cannot honour.
 
 Third-party integrations in this ecosystem commonly go through Power Automate,
-Workato or Zapier rather than direct API work, which suggests the direct API surface
-may be narrower than EveryAction's. **VERIFY**.
+Workato or Zapier rather than direct API work, which may indicate the direct API
+surface is narrower than a modern REST CRM's. **VERIFY.**
 
-### ⚠ Domain mismatch
+## ⚠ Documentation gap
 
-Apricot is **case management**, not fundraising. It models clients, programmes,
-services, forms and outcomes. There is **no native gift object** to map to our Gift
-entity.
+`developer.bonterra.network`, `account.bonterra.network`, the Apricot help centre and
+the Bonterra community sites are **all unreachable from this environment's network
+policy**. Everything specific below is assembled from search summaries and
+third-party integration guides, so treat all of it as **VERIFY** and read the primary
+sources before writing code. See
+[`../reference/api-docs-index.md`](../reference/api-docs-index.md).
 
-This means "supporting Apricot" is not the same project as supporting a donor CRM. It
-would require extending the canonical model with client/programme/service/outcome
-entities — explicitly out of scope in [02](../02-canonical-data-model.md) and
-[00](../00-overview.md).
+The largest single unknown: `developer.bonterra.network` documents what appears to be
+a newer **platform-level API** with OAuth 2.0, user management and core platform
+services. Whether it fronts Apricot data or is a separate administration surface
+**could not be determined**. If it is a unified modern data API, it changes the
+integration plan substantially. **Check this first.**
 
-### ⚠ Compliance posture
+## What we believe about the API
 
-Apricot data is **service-delivery data about vulnerable people**: case notes,
-assessments, and programme participation. Depending on the customer this can attract
-HIPAA, 42 CFR Part 2, FERPA, or state-level confidentiality obligations — a materially
-different regime from donor data.
+All **VERIFY**:
 
-**Do not begin Apricot integration work as though it were another CRM connector.** It
-needs its own data model, its own compliance review, and probably its own contractual
-terms. See [08](../08-security-and-compliance.md).
+- REST-based, with API authentication and endpoint requests — consistent with the
+  Zapier connector's description of connecting directly to a Bonterra Impact
+  Management site.
+- Endpoints exist for client management, case tracking and social-services data.
+- Apricot is **form-driven**: records are instances of customer-defined forms. So
+  "the schema" is substantially per-tenant, which pushes us toward runtime schema
+  discovery (`describeInstance` doing real work) rather than a static field map. This
+  is a bigger deal for Apricot than for either other provider and should be resolved
+  early — it determines whether Q9 (custom-field mapping) is a v1 requirement here
+  rather than a phase-3 nicety.
+- Change detection mechanism is **unknown**. If there is no delta query and no
+  webhook, sync falls back to full scans, and the scan cost scales with the
+  customer's record count. Establish this before promising sync latency.
 
-Recommendation: unless a specific customer commitment requires it, Apricot should be
-**out of scope for v1** and treated as a separate initiative.
+## Open questions specific to Apricot
 
----
-
-## Bonterra ETO
-
-- Authentication via a REST security endpoint: `POST /API/Security.svc/SSOAuthenticate/`
-  taking a **user email and password**, with the API feature enabled on the site.
-  **VERIFY** current mechanism.
-- Password-based service-account authentication is a security posture worth pushing
-  back on. If this is still the only option, the credential requires the strictest
-  handling we have ([08](../08-security-and-compliance.md)) and a dedicated,
-  least-privilege service account — never a staff member's own login.
-- Same case-management domain and compliance considerations as Apricot.
-
----
-
-## The Bonterra platform API portal
-
-`developer.bonterra.network` documents what appears to be a newer **platform-level**
-API — search summaries mention authentication, OAuth 2.0, user management and core
-platform services. There is also an account portal at `account.bonterra.network`.
-
-Whether this portal fronts EveryAction/Apricot data behind a unified modern API, or is
-a separate surface for platform administration, **could not be determined** from here.
-
-**If it is a unified data API with OAuth 2.0, it changes the plan substantially** — it
-would replace the support-issued-key onboarding that is otherwise EveryAction's worst
-property. This is the **first thing to check** once network access permits, and it is
-worth a direct conversation with Bonterra's partner/developer relations team rather
-than reverse-engineering from public docs.
-
----
+1. Does `developer.bonterra.network` expose Apricot data, and under OAuth 2.0?
+2. What is the change-detection mechanism, and are deletes detectable?
+3. How is the customer-defined form schema exposed — is there a metadata/describe API?
+4. What are the rate limits, and are they scoped per application or per tenant?
+   (The Blackbaud lesson: ask this early, because the answer is architectural.
+   See [05](../05-sync-engine.md#rate-limit-governance).)
+5. Which of our customers are on Enterprise or Pro, and which are not?
+6. Is write access needed, or is read-only ingestion sufficient for the product? For
+   case-management data specifically, read-only is a much easier compliance story and
+   worth considering on those grounds alone.
 
 ## Recommended sequencing
 
-1. **Answer Q1**: which Bonterra products do our customers run? Nothing else here is
-   worth doing before this.
-2. **Read the primary portals**, especially `developer.bonterra.network`.
-3. **Talk to Bonterra's partner team.** Given the portfolio complexity, the
-   support-issued keys, and the licence gates, a partnership conversation will be
-   faster and more reliable than documentation archaeology.
-4. **Build EveryAction first** if fundraising is the use case — it is the best-documented
-   and best-fitting.
-5. **Treat Apricot/ETO as a separate initiative** with its own data model and compliance
-   review.
+1. **Establish a Bonterra partner or developer-relations contact.** Given the
+   portfolio complexity, the licence gates and the unreadable portals, a
+   conversation will be faster and more reliable than documentation archaeology —
+   the same approach that turns out to be available to us with Blackbaud
+   ([`../11-partnership-status.md`](../11-partnership-status.md)).
+2. **Read `developer.bonterra.network`** and close the questions above.
+3. **Start the compliance review in parallel**, not afterwards. It has legal lead
+   time and it can invalidate design choices.
+4. **Design the case-management entity extension** to the canonical model.
+5. **Build read-only first.** It delivers value, and it defers the hardest consent
+   and redisclosure questions until we understand them properly.
