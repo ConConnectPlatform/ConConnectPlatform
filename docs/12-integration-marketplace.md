@@ -4,7 +4,7 @@ A marketplace page inside the ConConnect CRM listing the available integrations.
 A customer picks one and **books a setup call**; our team configures it with them on
 that call.
 
-**Prototype**: [`../prototypes/integration-interest-page.html`](../prototypes/integration-interest-page.html)
+**Prototype**: [`../prototypes/integration-marketplace.html`](../prototypes/integration-marketplace.html)
 — published at `https://claude.ai/artifact/FaXKqBka61UCJxAjsqHNGb` (private until
 shared from its Share menu).
 
@@ -53,7 +53,7 @@ Properties on each:
   "org_id":        "org_…",            // the nonprofit, not the user
   "org_name":      "…",
   "user_role":     "admin",
-  "provider":      "blackbaud_renxt",  // salesforce | bonterra_apricot | other
+  "provider":      "blackbaud_renxt",  // salesforce | bonterra_apricot | mailchimp | hubspot | other
   "provider_other":"Bloomerang",       // other-submitted only
   "card_position": 1,                  // guards against position bias
   "surface":       "marketplace"
@@ -117,6 +117,10 @@ Written down now, so the numbers are not read to confirm what we already intende
 - **Apricot's position turns on its licence gate**, not only on bookings. Customers
   below Enterprise or Pro cannot be integrated at all, so the question worth asking on
   the call is which tier they hold.
+- **Mailchimp and HubSpot are the cheap comparison.** They are smaller integrations
+  than the three donor systems, so if they take most of the bookings that is a finding
+  about where the real pain is, not a distraction — and it is worth acting on before
+  the expensive work.
 - **Three or more mentions of the same unlisted system** makes it a roadmap candidate.
   This is the most valuable thing the page can surface, because it is the only outcome
   we cannot predict.
@@ -143,8 +147,16 @@ The Apricot card says nothing about case-note content. What is synced there is a
 compliance question ([08](08-security-and-compliance.md)) and the page must not commit
 ahead of that answer.
 
-Category pills say what each integration **is** (Fundraising, Case management) rather
-than how far along we are. A marketplace tells a customer what a thing does; build
+- **Mailchimp** — audiences stay current as people move through programs; tags and
+  merge fields mapped to existing data; opens and clicks returned to the record. The
+  card states that unsubscribes are never overwritten, because that is the first thing
+  anyone responsible for an email list will want to know, and getting it wrong is a
+  CAN-SPAM problem rather than a bug.
+- **HubSpot** — contacts and companies with the customer's own properties, funder and
+  partner pipelines, form submissions landing on the right record.
+
+Category pills say what each integration **is** (Fundraising, Case management, Email,
+CRM) rather than how far along we are. A marketplace tells a customer what a thing does; build
 status is our concern, and "In design" on a card you can book a call for reads as a
 contradiction.
 
@@ -153,8 +165,12 @@ contradiction.
 - Set `BOOKING_URL` in the page script to the real HubSpot meetings link. Individual
   cards can override it with `data-booking` if each integration needs its own meeting
   type — worth doing if different people run different setups.
-- The marketplace is a settings surface, not a marketing page; it lives where an admin
-  configures their account.
+- The marketplace sits in the **top navigation** as a first-class destination, not
+  buried in settings. Note that the product's transactional email points customers at
+  "the side bar menu", so confirm which shell it is landing in.
+- Brand tokens come from [`reference/brand-tokens.md`](reference/brand-tokens.md).
+  Keep orange for actions only — once several things are orange, none of them reads as
+  the thing to click.
 - Cards are equal height with the buttons aligned. Unequal cards give one option more
   visual weight and bias the result.
 - Show a returning admin that their organization already has a booking or a live

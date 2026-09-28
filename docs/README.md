@@ -30,6 +30,9 @@ Machine-readable contract sketch: [`api/openapi.yaml`](api/openapi.yaml)
 Where the vendor documentation lives and what to read first:
 [`reference/api-docs-index.md`](reference/api-docs-index.md)
 
+Brand palette and how it is meant to be used:
+[`reference/brand-tokens.md`](reference/brand-tokens.md)
+
 ## How to read the confidence markers
 
 These docs were assembled from vendor documentation, vendor community posts, and
